@@ -2,11 +2,13 @@
 -- Responsible for argument handling and parsing.
 module Main where
 
-import Data.Semigroup ((<>))
-import Network.URI (parseURI)
+import Control.Monad            (void)
+import Data.Semigroup           ((<>))
+import Network.URI              (parseURI)
 import Options.Applicative
+import PictureMonster.Crawler
 import PictureMonster.Data
-import Text.Read (readMaybe)
+import Text.Read                (readMaybe)
 
 -- | Parser for positive integral values.
 -- Succeeds if and only if the value read is a positive integer.
@@ -47,13 +49,16 @@ possibly limit = limit <|> pure NoLimit
 connLimits :: Parser ConnectionLimits
 connLimits = Limits <$> possibly totalConnLimit <*> possibly hostConnLimit
 
--- | Parses arguments for the @new@ subcommand, which starts a new crawling session.
-newSession :: Parser Command
-newSession = NewSession <$> some (argument (maybeReader parseURI) $ 
+-- | Parses data concerning a single crawling session and returns them in a 'SessionData' instance.
+sessionData :: Parser SessionData
+sessionData = SessionData <$> some (argument (maybeReader parseURI) $
     metavar "URLS..."
     <> help "List of URLs to crawl in search of images.")
-    <*> connLimits
     <*> searchDepth
+
+-- | Parses arguments for the @new@ subcommand, which starts a new crawling session.
+newSession :: Parser Command
+newSession = NewSession <$> sessionData <*> connLimits
 
 -- | Parses arguments for the @continue@ subcommand, which continues a previous crawling session.
 existingSession :: Parser Command
@@ -76,6 +81,12 @@ opts = info (commandParser <**> helper)
     (fullDesc
     <> header "picture-monster: Web crawler and image downloader utility")
 
+-- | Runs the command specified by the user.
+runCommand :: Command -- ^ Command to be executed.
+           -> IO ()
+runCommand (NewSession session limits) = void $ crawl session limits
+runCommand _ = error "not implemented"
+
 -- | The main entry point for the program.
 main :: IO ()
-main = execParser opts >>= print
+main = execParser opts >>= runCommand

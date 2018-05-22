@@ -25,12 +25,20 @@ data ConnectionLimits = Limits {
     perHost :: ConnectionLimit
 } deriving Show
 
+-- | Contains the data concerning a single crawling session.
+data SessionData = SessionData {
+    -- | List of initial 'URI's to begin crawling from.
+    uris :: [URI],
+    -- | Maximum search depth.
+    depth :: SearchDepth
+} deriving Show
+
 -- | Represents the command chosen by the user.
 data Command
     -- | Starts a new crawling session.
     -- The crawler will begin from a supplied list of URIs.
     -- The crawling and image downloading process will adhere to the specified connection limits.
-    = NewSession [URI] ConnectionLimits SearchDepth
+    = NewSession SessionData ConnectionLimits
     -- | Continues a previously interrupted crawling session with the supplied ID.
     -- The crawling and image downloading process will adhere to the specified connection limits.
     | ExistingSession SessionId ConnectionLimits
