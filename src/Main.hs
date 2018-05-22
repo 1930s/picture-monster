@@ -6,20 +6,35 @@ import Data.Semigroup ((<>))
 import Network.URI (parseURI)
 import Options.Applicative
 import PictureMonster.Data
+import Text.Read (readMaybe)
+
+-- | Parser for positive integral values.
+-- Succeeds if and only if the value read is a positive integer.
+positiveReader :: (Read a, Integral a) => ReadM a
+positiveReader = maybeReader readPositive
+    where   readPositive :: (Read a, Integral a) => String -> Maybe a
+            readPositive num = readMaybe num >>= (\x -> if x > 0 then Just x else Nothing)
 
 -- | Parses the command-line option specifying the maximum number of outgoing connections.
 totalConnLimit :: Parser ConnectionLimit
-totalConnLimit = Limit <$> option auto
+totalConnLimit = Limit <$> option positiveReader
     (long "limit" 
     <> short 'L'
-    <> help "Total maximum number of connections")
+    <> help "Total maximum number of connections. Must be a positive value.")
 
 -- | Parses the command-line option specifying the maximum number of outgoing connections to a single host.
 hostConnLimit :: Parser ConnectionLimit
-hostConnLimit = Limit <$> option auto 
+hostConnLimit = Limit <$> option positiveReader
     (long "limit-per-host"
     <> short 'l'
-    <> help "Maximum number of connections to single host")
+    <> help "Maximum number of connections to single host. Must be a positive value.")
+
+-- | Parses the command-line option specifying the maximum search depth used when crawling.
+searchDepth :: Parser SearchDepth
+searchDepth = option positiveReader
+    (long "depth"
+    <> short 'd'
+    <> help "Maximum search depth during crawling. Must be a positive value.")
 
 -- | Runs the supplied parser and checks its value.
 -- If the parser succeeds, its value is passed forward.
@@ -38,6 +53,7 @@ newSession = NewSession <$> some (argument (maybeReader parseURI) $
     metavar "URLS..."
     <> help "List of URLs to crawl in search of images.")
     <*> connLimits
+    <*> searchDepth
 
 -- | Parses arguments for the @continue@ subcommand, which continues a previous crawling session.
 existingSession :: Parser Command

@@ -7,6 +7,9 @@ import Network.URI
 -- Used to continue the session at a later data.
 type SessionId = Int
 
+-- | Type used to store the maximum search depth during crawling.
+type SearchDepth = Int
+
 -- | Represents a limit of HTTP connections that can be used during crawling.
 data ConnectionLimit
     -- | Limited number of allowed HTTP connections.
@@ -27,7 +30,7 @@ data Command
     -- | Starts a new crawling session.
     -- The crawler will begin from a supplied list of URIs.
     -- The crawling and image downloading process will adhere to the specified connection limits.
-    = NewSession [URI] ConnectionLimits
+    = NewSession [URI] ConnectionLimits SearchDepth
     -- | Continues a previously interrupted crawling session with the supplied ID.
     -- The crawling and image downloading process will adhere to the specified connection limits.
     | ExistingSession SessionId ConnectionLimits
