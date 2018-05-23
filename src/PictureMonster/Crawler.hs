@@ -10,6 +10,7 @@ import qualified Data.Set as S
 import Network.HTTP.Simple
 import Network.URI
 import PictureMonster.Data
+import PictureMonster.Parallel
 import Text.HTML.DOM
 import Text.XML                 (Document)
 import Text.XML.Cursor
@@ -18,14 +19,15 @@ import Text.XML.Cursor
 crawl :: SessionData        -- ^ Structure containing the initial session data.
       -> ConnectionLimits   -- ^ Structure describing the connection limits specified by the user. (TODO)
       -> IO ()
-crawl (SessionData uris depth) limits = crawlRecursion depth uris >>= print
+crawl (SessionData uris depth) (Limits total _) = crawlRecursion total depth uris >>= print
 
 -- | Recursive function responsible for constructing and crawling the page tree.
-crawlRecursion :: SearchDepth   -- ^ Remaining search depth.
+crawlRecursion :: ConnectionLimit
+               -> SearchDepth   -- ^ Remaining search depth.
                -> [URI]         -- ^ Current list of URIs found.
                -> IO (Set URI)  -- ^ Resulting 'Set' of URIs found, wrapped in an 'IO' monad.
-crawlRecursion 0 uris = return $ S.fromList uris
-crawlRecursion n uris = S.union (s.fromList urls) <$> (concat <$> mapM getLinks uris) >>= (crawlRecursion $! (n - 1))
+crawlRecursion limit 0 uris = return $ S.fromList uris
+crawlRecursion limit n uris = S.union (S.fromList uris) <$> ((concat <$> mapParallel limit getLinks uris) >>= (crawlRecursion limit $! (n - 1)))
 
 -- | Fetches the contents of the webpage with the supplied URI and returns a list of links contained in the page.
 getLinks :: URI         -- ^ URI of the webpage to crawl.

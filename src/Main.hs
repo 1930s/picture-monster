@@ -2,13 +2,14 @@
 -- Responsible for argument handling and parsing.
 module Main where
 
-import Control.Monad            (void)
-import Data.Semigroup           ((<>))
-import Network.URI              (parseURI)
+import Control.Concurrent.ParallelIO.Global (stopGlobalPool)
+import Control.Monad                        (void)
+import Data.Semigroup                       ((<>))
+import Network.URI                          (parseURI)
 import Options.Applicative
 import PictureMonster.Crawler
 import PictureMonster.Data
-import Text.Read                (readMaybe)
+import Text.Read                            (readMaybe)
 
 -- | Parser for positive integral values.
 -- Succeeds if and only if the value read is a positive integer.
@@ -89,4 +90,4 @@ runCommand _ = error "not implemented"
 
 -- | The main entry point for the program.
 main :: IO ()
-main = execParser opts >>= runCommand
+main = execParser opts >>= runCommand >> stopGlobalPool
