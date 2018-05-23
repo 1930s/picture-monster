@@ -5,6 +5,8 @@ module PictureMonster.Crawler (crawl) where
 import Control.Monad
 import qualified Data.Text as T
 import Data.Maybe               (mapMaybe)
+import Data.Set                 (Set)
+import qualified Data.Set as S
 import Network.HTTP.Simple
 import Network.URI
 import PictureMonster.Data
@@ -16,16 +18,14 @@ import Text.XML.Cursor
 crawl :: SessionData        -- ^ Structure containing the initial session data.
       -> ConnectionLimits   -- ^ Structure describing the connection limits specified by the user. (TODO)
       -> IO ()
-crawl (SessionData uris depth) limits = (length <$> crawlRecursion depth uris) >>= print
+crawl (SessionData uris depth) limits = crawlRecursion depth uris >>= print
 
 -- | Recursive function responsible for constructing and crawling the page tree.
 crawlRecursion :: SearchDepth   -- ^ Remaining search depth.
                -> [URI]         -- ^ Current list of URIs found.
-               -> IO [URI]      -- ^ Resulting list of URIs found, wrapped in an 'IO' monad.
-crawlRecursion 0 uris = return uris
-crawlRecursion n uris = (concat <$> mapM getLinks uris) >>= (crawlRecursion $! (n - 1)) >>= appendChildren
-    where   appendChildren :: [URI] -> IO [URI]
-            appendChildren children = return $ uris ++ children
+               -> IO (Set URI)  -- ^ Resulting 'Set' of URIs found, wrapped in an 'IO' monad.
+crawlRecursion 0 uris = return $ S.fromList uris
+crawlRecursion n uris = S.union (s.fromList urls) <$> (concat <$> mapM getLinks uris) >>= (crawlRecursion $! (n - 1))
 
 -- | Fetches the contents of the webpage with the supplied URI and returns a list of links contained in the page.
 getLinks :: URI         -- ^ URI of the webpage to crawl.
@@ -54,7 +54,12 @@ parseLinks = mapMaybe parseURIReference
 resolveLinks :: URI     -- ^ Base 'URI' to use during resolution.
              -> [URI]   -- ^ List of 'URI's to resolve.
              -> [URI]   -- ^ Resulting list of resolved 'URI's.
-resolveLinks base = map (`relativeTo` base)
+resolveLinks base = map $ discardQueryAndFragment . (`relativeTo` base)
+
+-- | Scrubs an 'URI' instance, clearing the query string and fragment identifier.
+-- Used to remove 'URI's that point to the same document, but differ in query and fragment.
+discardQueryAndFragment :: URI -> URI
+discardQueryAndFragment (URI scheme authority path query fragment) = URI scheme authority path "" ""
 
 -- | Filters the 'URI's in the list supplied, leaving only the ones using the @http:@ or @https:@ schemes.
 filterLinks :: [URI]    -- ^ List of 'URI's to filter.
