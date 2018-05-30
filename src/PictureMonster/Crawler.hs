@@ -15,24 +15,59 @@ import Text.HTML.DOM
 import Text.XML                 (Document)
 import Text.XML.Cursor
 
+-- | Data structure holding the current crawling state.
+-- TODO: potentially change to StateT
+data CrawlState = State {
+    links :: [URI],
+    images :: Set URI
+} deriving Show
+
 -- | Responsible for performing the crawling operation.
 crawl :: SessionData        -- ^ Structure containing the initial session data.
       -> ConnectionLimits   -- ^ Structure describing the connection limits specified by the user. (TODO)
       -> IO ()
-crawl (SessionData uris depth) (Limits total _) = crawlRecursion total depth uris >>= print
+crawl (SessionData uris depth) (Limits total _) = crawlRecursion total depth (State uris $ S.fromList []) >>= print . images
 
 -- | Recursive function responsible for constructing and crawling the page tree.
 crawlRecursion :: ConnectionLimit
                -> SearchDepth   -- ^ Remaining search depth.
-               -> [URI]         -- ^ Current list of URIs found.
-               -> IO (Set URI)  -- ^ Resulting 'Set' of URIs found, wrapped in an 'IO' monad.
-crawlRecursion limit 0 uris = return $ S.fromList uris
-crawlRecursion limit n uris = S.union (S.fromList uris) <$> ((concat <$> mapParallel limit getLinks uris) >>= (crawlRecursion limit $! (n - 1)))
+               -> CrawlState    -- ^ Current list of URIs found.
+               -> IO CrawlState -- ^ Resulting 'Set' of URIs found, wrapped in an 'IO' monad.
+crawlRecursion limit 0 uris = return uris
+crawlRecursion limit n uris = stateUnion uris <$> ((concatState <$> mapParallel limit getContent (links uris)) >>= (crawlRecursion limit $! (n - 1)))
 
--- | Fetches the contents of the webpage with the supplied URI and returns a list of links contained in the page.
-getLinks :: URI         -- ^ URI of the webpage to crawl.
+-- | Concatenates two 'CrawlState' instances.
+concatState :: [CrawlState] ->  -- ^ List of 'CrawlState' instances being concatenated.
+               CrawlState       -- ^ Resulting concatenated 'CrawlState'.
+concatState [] = State [] $ S.fromList []
+concatState (x:xs) = State (links x ++ links ys) $ S.union (images x) (images ys)
+    where   ys = concatState xs
+
+-- | Merges the two crawl states.
+-- The list of link URLs in the first state is ignored.
+-- The sets of image URLs are merged.
+stateUnion :: CrawlState -> -- ^ First crawl state.
+              CrawlState -> -- ^ Second crawl state.
+              CrawlState    -- ^ Resulting crawl state.
+stateUnion first second = State (links second) $ S.union (images first) (images second)
+
+-- | Gets all links and image URIs found on a webpage.
+getContent :: URI           -- ^ URI of the webpage to crawl.
+           -> IO CrawlState -- ^ Result of the crawl, containing the links and images found.
+getContent uri = liftM2 State (getLinks uri document) (getImages uri document)
+    where   document = createRequest uri >>= getDocument
+
+-- | Returns a list of links contained in the page.
+getLinks :: URI         -- ^ URI of the webpage being crawled.
+         -> IO Document -- ^ The document to search, wrapped in an 'IO' monad.
          -> IO [URI]    -- ^ Resulting absolute links found in the page, wrapped in an 'IO' monad.
-getLinks uri = filterLinks . resolveLinks uri . parseLinks . findLinks <$> (createRequest uri >>= getDocument)
+getLinks uri document = processLinks uri . findLinks <$> document -- (createRequest uri >>= getDocument)
+
+-- | Returns a list of images contained in the page.
+getImages :: URI            -- ^ URI of the webpage being crawled.
+          -> IO Document    -- ^ The document to search, wrapped in an 'IO' monad.
+          -> IO (Set URI)   -- ^ Resulting image links found in the page. wrapped in an 'IO' monad.
+getImages uri document = S.fromList . processLinks uri . findImages <$> document
 
 -- | Creates a HTTP 'Request' object from an 'URI'.
 createRequest :: URI -> IO Request
@@ -46,6 +81,16 @@ getDocument req = httpSink req $ const sinkDoc
 findLinks :: Document -> [String]
 findLinks doc = map T.unpack $ concat $ cursor $// element "a" &| attribute "href"
     where   cursor = fromDocument doc
+
+-- | Searches for @<img>@ elements in the supplied HTML document and returns the values of their @src@ attributes.
+findImages :: Document -> [String]
+findImages doc = map T.unpack $ concat $ cursor $// element "img" &| attribute "src"
+    where   cursor = fromDocument doc
+
+-- | Performs processing of the links supplied.
+-- Eliminates invalid links, strips the query and fragment parts, and keeps only the 'URI's using the @http:@ or @https:@ schemes.
+processLinks :: URI -> [String] -> [URI]
+processLinks uri = filterLinks . resolveLinks uri . parseLinks
 
 -- | Parses a list of strings into 'URI's.
 -- Strings that do not constitute valid 'URI's are discarded.
