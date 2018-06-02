@@ -39,6 +39,14 @@ searchDepth = option positiveReader
     <> short 'd'
     <> help "Maximum search depth during crawling. Must be a positive value.")
 
+-- | Parses the command-line option specifying the extension of images to filter out.
+imgExtension :: Parser (Maybe Extension)
+imgExtension = (Just <$> option str
+    (long "extension"
+    <> short 'x'
+    <> help "Image extension to filter out. Only image files with the supplied extension will be saved to disk."))
+    <|> pure Nothing
+
 -- | Runs the supplied parser and checks its value.
 -- If the parser succeeds, its value is passed forward.
 -- If the parser fails, the parser returned will return 'NoLimit'.
@@ -56,6 +64,7 @@ sessionData = SessionData <$> some (argument (maybeReader parseURI) $
     metavar "URLS..."
     <> help "List of URLs to crawl in search of images.")
     <*> searchDepth
+    <*> imgExtension
 
 -- | Parses arguments for the @new@ subcommand, which starts a new crawling session.
 newSession :: Parser Command

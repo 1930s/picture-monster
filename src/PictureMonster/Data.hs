@@ -10,6 +10,9 @@ type SessionId = Int
 -- | Type used to store the maximum search depth during crawling.
 type SearchDepth = Int
 
+-- | Type used to represent image extensions.
+type Extension = String
+
 -- | Represents a limit of HTTP connections that can be used during crawling.
 data ConnectionLimit
     -- | Limited number of allowed HTTP connections.
@@ -30,7 +33,9 @@ data SessionData = SessionData {
     -- | List of initial 'URI's to begin crawling from.
     uris :: [URI],
     -- | Maximum search depth.
-    depth :: SearchDepth
+    depth :: SearchDepth,
+    -- | Extension of images to be searched.
+    extension :: Maybe String
 } deriving Show
 
 -- | Represents the command chosen by the user.

@@ -5,6 +5,7 @@ module PictureMonster.Crawler (crawl) where
 import Control.Monad
 import qualified Data.Text as T
 import Data.Maybe               (mapMaybe)
+import Data.List                (isSuffixOf)
 import Data.Set                 (Set)
 import qualified Data.Set as S
 import Network.HTTP.Simple
@@ -24,9 +25,18 @@ data CrawlState = State {
 
 -- | Responsible for performing the crawling operation.
 crawl :: SessionData        -- ^ Structure containing the initial session data.
-      -> ConnectionLimits   -- ^ Structure describing the connection limits specified by the user. (TODO)
+      -> ConnectionLimits   -- ^ Structure describing the connection limits specified by the user.
       -> IO ()
-crawl (SessionData uris depth) (Limits total _) = crawlRecursion total depth (State uris $ S.fromList []) >>= print . images
+crawl (SessionData uris depth ext) (Limits total _) = filterExt ext <$> crawlRecursion total depth (State uris $ S.fromList []) >>= print
+
+-- | Filters the set of images found during crawling.
+filterExt :: Maybe Extension    -- ^ Extension of images to use for filtering.
+          -> CrawlState         -- ^ The final crawling state.
+          -> Set URI            -- ^ The filtered set of 'URI's to download.
+filterExt Nothing state = images state
+filterExt (Just ext) (State _ imgs) = S.filter (testExt ext) imgs
+    where   testExt :: Extension -> URI -> Bool
+            testExt ext uri = ext `isSuffixOf` uriPath uri
 
 -- | Recursive function responsible for constructing and crawling the page tree.
 crawlRecursion :: ConnectionLimit
@@ -37,8 +47,8 @@ crawlRecursion limit 0 uris = return uris
 crawlRecursion limit n uris = stateUnion uris <$> ((concatState <$> mapParallel limit getContent (links uris)) >>= (crawlRecursion limit $! (n - 1)))
 
 -- | Concatenates two 'CrawlState' instances.
-concatState :: [CrawlState] ->  -- ^ List of 'CrawlState' instances being concatenated.
-               CrawlState       -- ^ Resulting concatenated 'CrawlState'.
+concatState :: [CrawlState]         -- ^ List of 'CrawlState' instances being concatenated.
+            -> CrawlState           -- ^ Resulting concatenated 'CrawlState'.
 concatState [] = State [] $ S.fromList []
 concatState (x:xs) = State (links x ++ links ys) $ S.union (images x) (images ys)
     where   ys = concatState xs
@@ -46,9 +56,9 @@ concatState (x:xs) = State (links x ++ links ys) $ S.union (images x) (images ys
 -- | Merges the two crawl states.
 -- The list of link URLs in the first state is ignored.
 -- The sets of image URLs are merged.
-stateUnion :: CrawlState -> -- ^ First crawl state.
-              CrawlState -> -- ^ Second crawl state.
-              CrawlState    -- ^ Resulting crawl state.
+stateUnion :: CrawlState        -- ^ First crawl state.
+           -> CrawlState        -- ^ Second crawl state.
+           -> CrawlState        -- ^ Resulting crawl state.
 stateUnion first second = State (links second) $ S.union (images first) (images second)
 
 -- | Gets all links and image URIs found on a webpage.
