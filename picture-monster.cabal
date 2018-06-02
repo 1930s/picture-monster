@@ -29,5 +29,5 @@ executable picture-monster
                        text                 >= 1.2.3.0,
                        transformers         >= 0.5.2.0,
                        xml-conduit          >= 1.8.0
-  ghc-options:         -threaded
+  ghc-options:         -threaded -with-rtsopts=-N
 
