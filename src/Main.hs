@@ -9,6 +9,7 @@ import Network.URI                          (parseURI)
 import Options.Applicative
 import PictureMonster.Crawler
 import PictureMonster.Data
+import PictureMonster.Pooling
 import Text.Read                            (readMaybe)
 
 -- | Parser for positive integral values.
@@ -94,7 +95,7 @@ opts = info (commandParser <**> helper)
 -- | Runs the command specified by the user.
 runCommand :: Command -- ^ Command to be executed.
            -> IO ()
-runCommand (NewSession session limits) = void $ crawl session limits
+runCommand (NewSession session limits) = (pool limits <$> crawl session limits) >>= print
 runCommand _ = error "not implemented"
 
 -- | The main entry point for the program.

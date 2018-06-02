@@ -13,6 +13,9 @@ type SearchDepth = Int
 -- | Type used to represent image extensions.
 type Extension = String
 
+-- | Type used to represent a pool of 'URI's that can be downloaded concurrently.
+type URIPool = [URI]
+
 -- | Represents a limit of HTTP connections that can be used during crawling.
 data ConnectionLimit
     -- | Limited number of allowed HTTP connections.
