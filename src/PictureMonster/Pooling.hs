@@ -1,7 +1,7 @@
 -- | Module exposing the functionality of image download pooling.
 -- To respect the per-host download limits imposed by the user, the 'URI's to download are split into pools,
 -- which are maximal sets of images that can be downloaded concurrently without violating the limits.
-module PictureMonster.Pooling where
+module PictureMonster.Pooling (pool) where
 
 import qualified Data.Map.Strict as M
 import Data.Maybe                       (maybe)

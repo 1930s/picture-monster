@@ -17,11 +17,16 @@ executable picture-monster
   main-is:             Main.hs
   other-modules:       PictureMonster.Crawler
                        PictureMonster.Data
+                       PictureMonster.Downloader
+                       PictureMonster.Network
                        PictureMonster.Parallel
                        PictureMonster.Pooling
   default-language:    Haskell2010
   build-depends:       base                 >= 4.7 && < 5,
+                       conduit              >= 1.3.0.2,
                        containers           >= 0.5.10.2,
+                       directory            >= 1.3.0.2,
+                       filepath             >= 1.4.1.2,
                        http-conduit         >= 2.3.1,
                        html-conduit         >= 1.3.0,
                        network-uri          >= 2.6.1.0,

@@ -12,6 +12,7 @@ import Network.HTTP.Simple
 import Network.URI
 import PictureMonster.Data
 import PictureMonster.Parallel
+import PictureMonster.Network
 import Text.HTML.DOM
 import Text.XML                 (Document)
 import Text.XML.Cursor
@@ -78,10 +79,6 @@ getImages :: URI            -- ^ URI of the webpage being crawled.
           -> IO Document    -- ^ The document to search, wrapped in an 'IO' monad.
           -> IO (Set URI)   -- ^ Resulting image links found in the page. wrapped in an 'IO' monad.
 getImages uri document = S.fromList . processLinks uri . findImages <$> document
-
--- | Creates a HTTP 'Request' object from an 'URI'.
-createRequest :: URI -> IO Request
-createRequest uri = parseRequest $ uriToString id uri ""
 
 -- | Fetches the contents of a 'Document', using the supplied 'Request'.
 getDocument :: Request -> IO Document
