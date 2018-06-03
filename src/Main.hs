@@ -49,6 +49,23 @@ imgExtension = (Just <$> option str
     <> help "Image extension to filter out. Only image files with the supplied extension will be saved to disk."))
     <|> pure Nothing
 
+-- | Parses the command-line option specifying the path to the target directory in which to save the downloaded files.
+targetDirectory :: Parser FilePath
+targetDirectory = option str
+    (long "directory"
+    <> short 'D'
+    <> help "Target directory in which the images found should be saved. If omitted, images will be saved in the current working directory.")
+    <|> pure "."
+
+-- | Parses data concerning a single crawling session and returns them in a 'SessionData' instance.
+sessionData :: Parser SessionData
+sessionData = SessionData <$> some (argument (maybeReader parseURI) $
+    metavar "URLS..."
+    <> help "List of URLs to crawl in search of images.")
+    <*> searchDepth
+    <*> imgExtension
+    <*> targetDirectory
+
 -- | Runs the supplied parser and checks its value.
 -- If the parser succeeds, its value is passed forward.
 -- If the parser fails, the parser returned will return 'NoLimit'.
@@ -59,14 +76,6 @@ possibly limit = limit <|> pure NoLimit
 -- | Parses the connection limits specified by the user in the command line.
 connLimits :: Parser ConnectionLimits
 connLimits = Limits <$> possibly totalConnLimit <*> possibly hostConnLimit
-
--- | Parses data concerning a single crawling session and returns them in a 'SessionData' instance.
-sessionData :: Parser SessionData
-sessionData = SessionData <$> some (argument (maybeReader parseURI) $
-    metavar "URLS..."
-    <> help "List of URLs to crawl in search of images.")
-    <*> searchDepth
-    <*> imgExtension
 
 -- | Parses arguments for the @new@ subcommand, which starts a new crawling session.
 newSession :: Parser Command
@@ -96,7 +105,7 @@ opts = info (commandParser <**> helper)
 -- | Runs the command specified by the user.
 runCommand :: Command -- ^ Command to be executed.
            -> IO ()
-runCommand (NewSession session limits) = (pool limits <$> crawl session limits) >>= download limits
+runCommand (NewSession session limits) = (pool limits <$> crawl session limits) >>= download session limits
 runCommand _ = error "not implemented"
 
 -- | The main entry point for the program.

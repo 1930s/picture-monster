@@ -27,8 +27,8 @@ data CrawlState = State {
 -- | Responsible for performing the crawling operation.
 crawl :: SessionData        -- ^ Structure containing the initial session data.
       -> ConnectionLimits   -- ^ Structure describing the connection limits specified by the user.
-      -> IO [URI]              -- ^ List of images found.
-crawl (SessionData uris depth ext) (Limits total _) = S.toList <$> (filterExt ext <$> crawlRecursion total depth (State uris $ S.fromList []))
+      -> IO [URI]           -- ^ List of images found.
+crawl (SessionData uris depth ext _) (Limits total _) = S.toList <$> (filterExt ext <$> crawlRecursion total depth (State uris $ S.fromList []))
 
 -- | Filters the set of images found during crawling.
 filterExt :: Maybe Extension    -- ^ Extension of images to use for filtering.

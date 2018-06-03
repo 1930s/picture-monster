@@ -38,7 +38,9 @@ data SessionData = SessionData {
     -- | Maximum search depth.
     depth :: SearchDepth,
     -- | Extension of images to be searched.
-    extension :: Maybe String
+    extension :: Maybe String,
+    -- | Path to parent directory where the file should be saved.
+    targetDir :: FilePath
 } deriving Show
 
 -- | Represents the command chosen by the user.
