@@ -1,6 +1,7 @@
 -- | Module containing data structures used by the application.
 module PictureMonster.Data where
 
+import Data.Set (Set)
 import Network.URI
 
 -- | Identification number assigned to a previously started crawling session that has been interrupted.
@@ -54,3 +55,9 @@ data Command
     | ExistingSession SessionId ConnectionLimits
     -- | Lists all interrupted crawling sessions with their IDs.
     | ListSessions deriving Show
+
+-- | Data structure holding the current crawling state.
+data CrawlState = State {
+    links :: [URI],
+    images :: Set URI
+} deriving Show

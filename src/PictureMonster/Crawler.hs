@@ -13,22 +13,19 @@ import Network.URI
 import PictureMonster.Data
 import PictureMonster.Parallel
 import PictureMonster.Network
+import PictureMonster.Serializer
+import System.IO
 import Text.HTML.DOM
 import Text.XML                 (Document)
 import Text.XML.Cursor
 
--- | Data structure holding the current crawling state.
--- TODO: potentially change to StateT
-data CrawlState = State {
-    links :: [URI],
-    images :: Set URI
-} deriving Show
-
 -- | Responsible for performing the crawling operation.
-crawl :: SessionData        -- ^ Structure containing the initial session data.
+crawl :: Handle
+      -> SessionData        -- ^ Structure containing the initial session data.
       -> ConnectionLimits   -- ^ Structure describing the connection limits specified by the user.
       -> IO [URI]           -- ^ List of images found.
-crawl (SessionData uris depth ext _) (Limits total _) = S.toList <$> (filterExt ext <$> crawlRecursion total depth (State uris $ S.fromList []))
+crawl handle (SessionData uris depth ext _) (Limits total _) = crawlingHeader handle >>
+    S.toList <$> (filterExt ext <$> crawlRecursion handle total depth (State uris $ S.fromList []))
 
 -- | Filters the set of images found during crawling.
 filterExt :: Maybe Extension    -- ^ Extension of images to use for filtering.
@@ -40,12 +37,17 @@ filterExt (Just ext) (State _ imgs) = S.filter (testExt ext) imgs
             testExt ext uri = ext `isSuffixOf` uriPath uri
 
 -- | Recursive function responsible for constructing and crawling the page tree.
-crawlRecursion :: ConnectionLimit
+crawlRecursion :: Handle
+               -> ConnectionLimit
                -> SearchDepth   -- ^ Remaining search depth.
                -> CrawlState    -- ^ Current list of URIs found.
                -> IO CrawlState -- ^ Resulting 'Set' of URIs found, wrapped in an 'IO' monad.
-crawlRecursion limit 0 uris = return uris
-crawlRecursion limit n uris = stateUnion uris <$> ((concatState <$> mapParallel limit getContent (links uris)) >>= (crawlRecursion limit $! (n - 1)))
+crawlRecursion handle limit 0 uris = return uris
+crawlRecursion handle limit n uris = putLayer handle n >>
+    concatState <$> mapParallel limit getContent (links uris) >>=
+    (\state -> putLayerState handle state >> return state) >>=
+    return . (stateUnion uris) >>=
+    (crawlRecursion handle limit $! (n - 1))
 
 -- | Concatenates two 'CrawlState' instances.
 concatState :: [CrawlState]         -- ^ List of 'CrawlState' instances being concatenated.

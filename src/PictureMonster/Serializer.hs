@@ -1,7 +1,7 @@
 -- | Module used to serialize data passing through the application.
--- TODO: Maybe do this with Conduit?
-module PictureMonster.Serializer (serializeSession) where
+module PictureMonster.Serializer where
 
+import qualified Data.Set as S
 import Network.URI
 import PictureMonster.Data
 import System.IO
@@ -10,15 +10,16 @@ import System.IO
 serializeSession :: Handle      -- 'Handle' of the file to write to.
                  -> SessionData -- 'SessionData' object to be serialized.
                  -> IO ()
-serializeSession handle session = header handle >>
+serializeSession handle session = putHeader handle >>
     putUris handle (uris session) >>
     putDepth handle (depth session) >>
     putExtension handle (extension session) >>
-    putTargetDir handle (targetDir session)
+    putTargetDir handle (targetDir session) >>
+    hPutStrLn handle ""
 
 -- | Prints the header of the file.
-header :: Handle -> IO ()
-header handle = hPutStrLn handle "# Picture Monster" >>
+putHeader :: Handle -> IO ()
+putHeader handle = hPutStrLn handle "# Picture Monster" >>
     hPutStrLn handle "## Session information"
 
 -- | Prints a list of 'URI's, formatted as a bullet list, to the handle.
@@ -44,3 +45,22 @@ putTargetDir handle path = hPutStr handle "* Target directory: " >> backquote ha
 -- | Prints the supplied string in backquotes to the handle.
 backquote :: Handle -> String -> IO ()
 backquote handle str = hPutStr handle "`" >> hPutStr handle str >> hPutStrLn handle "`"
+
+crawlingHeader :: Handle -> IO ()
+crawlingHeader handle = hPutStrLn handle "## Crawling report"
+
+putLayer :: Handle -> SearchDepth -> IO ()
+putLayer handle depth = hPutStr handle "### Layer " >> hPutStrLn handle (show depth)
+
+putLayerState :: Handle -> CrawlState -> IO ()
+putLayerState handle state = hPutStrLn handle "#### Links found" >>
+    putUriList handle (links state) >>
+    hPutStrLn handle "#### Images found" >>
+    putUriList handle (images state) >>
+    hPutStrLn handle ""
+
+putUriList :: (Foldable f) => Handle -> f URI -> IO ()
+putUriList handle uris = mapM_ (putUri handle) uris >> hPutStrLn handle ""
+
+putUri :: Handle -> URI -> IO ()
+putUri handle uri = hPutStr handle "* " >> hPutStrLn handle (show uri)

@@ -109,7 +109,7 @@ runCommand :: Command -- ^ Command to be executed.
            -> IO ()
 runCommand (NewSession session limits) = withFile "out_file.md" WriteMode $ \handle ->
     serializeSession handle session >>
-    (pool limits <$> crawl session limits) >>=
+    (pool limits <$> crawl handle session limits) >>=
     download session limits
 runCommand _ = error "not implemented"
 
