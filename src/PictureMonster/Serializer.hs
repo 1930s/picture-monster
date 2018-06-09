@@ -1,5 +1,10 @@
 -- | Module used to serialize data passing through the application.
-module PictureMonster.Serializer where
+module PictureMonster.Serializer
+    (serializeSession,
+    crawlingHeader,
+    putLayer,
+    putLayerState)
+where
 
 import qualified Data.Set as S
 import Network.URI
@@ -46,12 +51,15 @@ putTargetDir handle path = hPutStr handle "* Target directory: " >> backquote ha
 backquote :: Handle -> String -> IO ()
 backquote handle str = hPutStr handle "`" >> hPutStr handle str >> hPutStrLn handle "`"
 
+-- | Prints the markdown header for the crawling report.
 crawlingHeader :: Handle -> IO ()
 crawlingHeader handle = hPutStrLn handle "## Crawling report"
 
+-- | Prints the header for a crawling layer.
 putLayer :: Handle -> SearchDepth -> IO ()
 putLayer handle depth = hPutStr handle "### Layer " >> hPutStrLn handle (show depth)
 
+-- | Saves the crawling state from a layer to the handle.
 putLayerState :: Handle -> CrawlState -> IO ()
 putLayerState handle state = hPutStrLn handle "#### Links found" >>
     putUriList handle (links state) >>
@@ -59,8 +67,10 @@ putLayerState handle state = hPutStrLn handle "#### Links found" >>
     putUriList handle (images state) >>
     hPutStrLn handle ""
 
+-- | Prints a 'Foldable' of 'URI's as a markdown list to the handle.
 putUriList :: (Foldable f) => Handle -> f URI -> IO ()
 putUriList handle uris = mapM_ (putUri handle) uris >> hPutStrLn handle ""
 
+-- | Prints an 'URI' to the handle, as a markdown item.
 putUri :: Handle -> URI -> IO ()
 putUri handle uri = hPutStr handle "* " >> hPutStrLn handle (show uri)
