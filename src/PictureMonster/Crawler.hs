@@ -25,7 +25,7 @@ crawl :: Handle
       -> ConnectionLimits   -- ^ Structure describing the connection limits specified by the user.
       -> IO [URI]           -- ^ List of images found.
 crawl handle (SessionData uris depth ext _) (Limits total _) = crawlingHeader handle >>
-    S.toList <$> (filterExt ext <$> crawlRecursion handle total depth (State uris $ S.fromList []))
+    S.toList <$> (filterExt ext <$> crawlRecursion handle total depth (State (S.fromList uris) S.empty))
 
 -- | Filters the set of images found during crawling.
 filterExt :: Maybe Extension    -- ^ Extension of images to use for filtering.
@@ -44,7 +44,7 @@ crawlRecursion :: Handle
                -> IO CrawlState -- ^ Resulting 'Set' of URIs found, wrapped in an 'IO' monad.
 crawlRecursion handle limit 0 uris = return uris
 crawlRecursion handle limit n uris = putLayer handle n >>
-    concatState <$> mapParallel limit getContent (links uris) >>=
+    concatState <$> mapParallel limit getContent (S.toList $ links uris) >>=
     (\state -> putLayerState handle state >> return state) >>=
     return . (stateUnion uris) >>=
     (crawlRecursion handle limit $! (n - 1))
@@ -52,8 +52,8 @@ crawlRecursion handle limit n uris = putLayer handle n >>
 -- | Concatenates two 'CrawlState' instances.
 concatState :: [CrawlState]         -- ^ List of 'CrawlState' instances being concatenated.
             -> CrawlState           -- ^ Resulting concatenated 'CrawlState'.
-concatState [] = State [] $ S.fromList []
-concatState (x:xs) = State (links x ++ links ys) $ S.union (images x) (images ys)
+concatState [] = State S.empty S.empty
+concatState (x:xs) = State (S.union (links x) (links ys)) $ S.union (images x) (images ys)
     where   ys = concatState xs
 
 -- | Merges the two crawl states.
@@ -71,10 +71,10 @@ getContent uri = liftM2 State (getLinks uri document) (getImages uri document)
     where   document = createRequest uri >>= getDocument
 
 -- | Returns a list of links contained in the page.
-getLinks :: URI         -- ^ URI of the webpage being crawled.
-         -> IO Document -- ^ The document to search, wrapped in an 'IO' monad.
-         -> IO [URI]    -- ^ Resulting absolute links found in the page, wrapped in an 'IO' monad.
-getLinks uri document = processLinks uri . findLinks <$> document -- (createRequest uri >>= getDocument)
+getLinks :: URI             -- ^ URI of the webpage being crawled.
+         -> IO Document     -- ^ The document to search, wrapped in an 'IO' monad.
+         -> IO (Set URI)    -- ^ Resulting absolute links found in the page, wrapped in an 'IO' monad.
+getLinks uri document = S.fromList . processLinks uri . findLinks <$> document -- (createRequest uri >>= getDocument)
 
 -- | Returns a list of images contained in the page.
 getImages :: URI            -- ^ URI of the webpage being crawled.

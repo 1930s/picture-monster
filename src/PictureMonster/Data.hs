@@ -58,6 +58,6 @@ data Command
 
 -- | Data structure holding the current crawling state.
 data CrawlState = State {
-    links :: [URI],
+    links :: Set URI,
     images :: Set URI
 } deriving Show
