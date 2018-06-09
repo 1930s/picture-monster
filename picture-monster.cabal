@@ -20,6 +20,7 @@ executable picture-monster
                        PictureMonster.Downloader
                        PictureMonster.Network
                        PictureMonster.Parallel
+                       PictureMonster.Parser
                        PictureMonster.Pooling
                        PictureMonster.Serializer
   default-language:    Haskell2010
@@ -34,6 +35,7 @@ executable picture-monster
                        network-uri          >= 2.6.1.0,
                        optparse-applicative >= 0.14.2.0,
                        parallel-io          >= 0.3.3,
+                       parsec               >= 3.1.13.0,
                        text                 >= 1.2.3.0,
                        transformers         >= 0.5.2.0,
                        xml-conduit          >= 1.8.0

@@ -29,7 +29,7 @@ putHeader handle = hPutStrLn handle "# Picture Monster" >>
 
 -- | Prints a list of 'URI's, formatted as a bullet list, to the handle.
 putUris :: Handle -> [URI] -> IO ()
-putUris handle uris = hPutStrLn handle "* URLs found:" >>
+putUris handle uris = hPutStrLn handle "* Starting URLs:" >>
     mapM_ (\uri -> hPutStr handle "\t- " >> backquote handle (show uri)) uris
 
 -- | Prints 'SearchDepth' information to the handle.
@@ -73,4 +73,4 @@ putUriList handle uris = mapM_ (putUri handle) uris >> hPutStrLn handle ""
 
 -- | Prints an 'URI' to the handle, as a markdown item.
 putUri :: Handle -> URI -> IO ()
-putUri handle uri = hPutStr handle "* " >> hPutStrLn handle (show uri)
+putUri handle uri = hPutStr handle "* " >> backquote handle (show uri)
