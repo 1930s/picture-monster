@@ -12,8 +12,8 @@ import Text.Read
 
 type Parser = Parsec String ()
 
-parseSession :: Parser (SessionData, CrawlLayer)
-parseSession = liftM2 (,) parseSessionInfo parseLayers
+parseSession :: Parser (SessionData, Maybe CrawlLayer)
+parseSession = liftM2 (,) parseSessionInfo $ (try $ Just <$> parseLayers) <|> (return Nothing)
 
 skipNewLine :: a -> Parser a
 skipNewLine val = endOfLine >> return val
@@ -60,7 +60,7 @@ parseTargetDirectory = string "* Target directory: " >> parseBackquote
 
 parseLayers :: Parser CrawlLayer
 parseLayers = layerUnion <$> ((string "## Crawling report") >> endOfLine >>
-    many parseLayer)
+    some (try parseLayer))
 
 layerUnion :: [CrawlLayer] -> CrawlLayer
 layerUnion [] = Layer 0 $ State S.empty S.empty
