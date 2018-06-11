@@ -25,7 +25,8 @@ crawl :: Handle             -- ^ Handle to the file that contains the crawling s
       -> ConnectionLimits   -- ^ Structure describing the connection limits specified by the user.
       -> IO [URI]           -- ^ List of images found.
 crawl handle (SessionData uris depth ext _) (Limits total _) = crawlingHeader handle >>
-    S.toList <$> (filterExt ext <$> crawlRecursion handle total depth (State (S.fromList uris) S.empty))
+    S.toList <$> (filterExt ext <$> crawlRecursion handle total depth (State (S.fromList uris) S.empty)) >>=
+    \uris -> endSession handle >> return uris
 
 -- | Filters the set of images found during crawling.
 filterExt :: Maybe Extension    -- ^ Extension of images to use for filtering.
