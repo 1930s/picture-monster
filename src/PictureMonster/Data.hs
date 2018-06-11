@@ -1,7 +1,7 @@
 -- | Module containing data structures used by the application.
 module PictureMonster.Data where
 
-import Data.Set (Set)
+import qualified Data.Set as S
 import Network.URI
 
 -- | Identification number assigned to a previously started crawling session that has been interrupted.
@@ -58,6 +58,19 @@ data Command
 
 -- | Data structure holding the current crawling state.
 data CrawlState = State {
-    links :: Set URI,
-    images :: Set URI
+    links :: S.Set URI,
+    images :: S.Set URI
+} deriving Show
+
+-- | Merges the two crawl states.
+-- The list of link URLs in the first state is ignored.
+-- The sets of image URLs are merged.
+stateUnion :: CrawlState        -- ^ First crawl state.
+           -> CrawlState        -- ^ Second crawl state.
+           -> CrawlState        -- ^ Resulting crawl state.
+stateUnion first second = State (links second) $ S.union (images first) (images second)
+
+data CrawlLayer = Layer {
+    remainingDepth :: SearchDepth,
+    state :: CrawlState
 } deriving Show

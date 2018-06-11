@@ -1,45 +1,88 @@
 module PictureMonster.Parser where
 
 import Control.Applicative hiding (many, (<|>))
+import Control.Monad
+import qualified Data.Set as S
 import Network.URI
 import PictureMonster.Data
-import Text.Parsec
+import Text.Parsec hiding (State)
 import Text.Parsec.Char
 import Text.Parsec.Combinator
 import Text.Read
 
 type Parser = Parsec String ()
 
+parseSession :: Parser (SessionData, CrawlLayer)
+parseSession = liftM2 (,) parseSessionInfo parseLayers
+
+skipNewLine :: a -> Parser a
+skipNewLine val = endOfLine >> return val
+
 parseSessionInfo :: Parser SessionData
 parseSessionInfo = string "# Picture Monster" >> endOfLine >>
     string "## Session information" >> endOfLine >>
     SessionData <$> parseStartingUrls <*>
-    parseSearchDepth <*>
+    parseInitialDepth <*>
     parseFileExtension <*>
-    parseTargetDirectory
+    parseTargetDirectory >>=
+    skipNewLine
 
 parseStartingUrls :: Parser [URI]
 parseStartingUrls = string "* Starting URLs:" >> endOfLine >> endBy1 parseStartingUrl endOfLine
 
 parseStartingUrl :: Parser URI
-parseStartingUrl = tab >> string "- " >> parseBackquote >>= \s -> case (parseURI s) of
+parseStartingUrl = tab >> string "- " >> parseBackquotedUri
+
+parseBackquotedUri :: Parser URI
+parseBackquotedUri = parseBackquote >>= \s -> case (parseURI s) of
     Nothing     -> parserZero
     Just uri    -> return uri
 
 parseBackquote :: Parser String
 parseBackquote = between (char '`') (char '`') (many $ noneOf "`")
 
-parseSearchDepth :: Parser SearchDepth
-parseSearchDepth = (string "* Maximum search depth: ") >> 
-    (many1 digit) >>= (\d -> case (readMaybe d) of
+parseInitialDepth :: Parser SearchDepth
+parseInitialDepth = (string "* Maximum search depth: ") >> parseDepth
+
+parseDepth :: Parser SearchDepth
+parseDepth = (many1 digit) >>= (\d -> case (readMaybe d) of
         Nothing     -> parserZero
         Just depth  -> return depth
-    ) >>= (\d -> endOfLine >> return d)
+    ) >>= skipNewLine
 
 parseFileExtension :: Parser (Maybe Extension)
 parseFileExtension = string "* Target file extension: " >>
     (Just <$> parseBackquote <|> (string "None" >> return Nothing)) >>= 
-    (\ext -> endOfLine >> return ext)
+    skipNewLine
 
 parseTargetDirectory :: Parser FilePath
 parseTargetDirectory = string "* Target directory: " >> parseBackquote
+
+parseLayers :: Parser CrawlLayer
+parseLayers = layerUnion <$> ((string "## Crawling report") >> endOfLine >>
+    many parseLayer)
+
+layerUnion :: [CrawlLayer] -> CrawlLayer
+layerUnion [] = Layer 0 $ State S.empty S.empty
+layerUnion [x] = x
+layerUnion (x:xs) = Layer (remainingDepth u) $ stateUnion (state x) (state u)
+    where u = layerUnion xs
+
+parseLayer :: Parser CrawlLayer
+parseLayer = Layer <$> parseLayerHeader <*> parseLayerContents >>=
+    \layer -> parseEnd "Layer complete." >> return layer
+
+parseLayerHeader :: Parser SearchDepth
+parseLayerHeader = string "### Layer " >> parseDepth
+
+parseLayerContents :: Parser CrawlState
+parseLayerContents = State <$> parseLayerSet "Links found" <*> parseLayerSet "Images found"
+
+parseLayerSet :: String -> Parser (S.Set URI)
+parseLayerSet header = string "#### " >> string header >> endOfLine >> parseUriList
+
+parseUriList :: Parser (S.Set URI)
+parseUriList = S.fromList <$> many (string "* " >> parseBackquotedUri >>= skipNewLine)
+
+parseEnd :: String -> Parser ()
+parseEnd msg = string "__" >> string msg >> string "__" >> endOfLine >> return ()

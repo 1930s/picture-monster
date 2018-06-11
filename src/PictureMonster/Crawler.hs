@@ -57,14 +57,6 @@ concatState [] = State S.empty S.empty
 concatState (x:xs) = State (S.union (links x) (links ys)) $ S.union (images x) (images ys)
     where   ys = concatState xs
 
--- | Merges the two crawl states.
--- The list of link URLs in the first state is ignored.
--- The sets of image URLs are merged.
-stateUnion :: CrawlState        -- ^ First crawl state.
-           -> CrawlState        -- ^ Second crawl state.
-           -> CrawlState        -- ^ Resulting crawl state.
-stateUnion first second = State (links second) $ S.union (images first) (images second)
-
 -- | Gets all links and image URIs found on a webpage.
 getContent :: URI           -- ^ URI of the webpage to crawl.
            -> IO CrawlState -- ^ Result of the crawl, containing the links and images found.

@@ -20,8 +20,7 @@ serializeSession handle session = putHeader handle >>
     putUris handle (uris session) >>
     putDepth handle (depth session) >>
     putExtension handle (extension session) >>
-    putTargetDir handle (targetDir session) >>
-    hPutStrLn handle ""
+    putTargetDir handle (targetDir session)
 
 -- | Prints the header of the file.
 putHeader :: Handle -> IO ()
@@ -66,16 +65,15 @@ putLayerState handle state = hPutStrLn handle "#### Links found" >>
     putUriList handle (links state) >>
     hPutStrLn handle "#### Images found" >>
     putUriList handle (images state) >>
-    hPutStrLn handle "**Layer complete.**" >>
-    hPutStrLn handle ""
+    hPutStrLn handle "__Layer complete.__"
 
 -- | Prints a 'Foldable' of 'URI's as a markdown list to the handle.
 putUriList :: (Foldable f) => Handle -> f URI -> IO ()
-putUriList handle uris = mapM_ (putUri handle) uris >> hPutStrLn handle ""
+putUriList handle uris = mapM_ (putUri handle) uris
 
 -- | Prints an 'URI' to the handle, as a markdown item.
 putUri :: Handle -> URI -> IO ()
 putUri handle uri = hPutStr handle "* " >> backquote handle (show uri)
 
 endSession :: Handle -> IO ()
-endSession handle = hPutStrLn handle "**Report complete.**"
+endSession handle = hPutStrLn handle "__Report complete.__"
