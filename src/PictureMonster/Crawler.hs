@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 -- | Module responsible for performing web crawling, constructing the page reference tree and collecting image URLs.
-module PictureMonster.Crawler (crawl) where
+module PictureMonster.Crawler (crawl, continueCrawl) where
 
 import Control.Monad
 import qualified Data.Text as T
@@ -24,9 +24,27 @@ crawl :: Handle             -- ^ Handle to the file that contains the crawling s
       -> SessionData        -- ^ Structure containing the initial session data.
       -> ConnectionLimits   -- ^ Structure describing the connection limits specified by the user.
       -> IO [URI]           -- ^ List of images found.
-crawl handle (SessionData uris depth ext _) (Limits total _) = crawlingHeader handle >>
-    S.toList <$> (filterExt ext <$> crawlRecursion handle total depth (State (S.fromList uris) S.empty)) >>=
+crawl handle session (Limits total _) = crawlingHeader handle >>
+    getUriList handle session total (initialLayer session) >>=
     \uris -> endSession handle >> return uris
+
+initialLayer :: SessionData -> CrawlLayer
+initialLayer (SessionData uris depth _ _) = Layer depth (State (S.fromList uris) S.empty)
+
+continueCrawl :: Handle
+              -> SessionData
+              -> ConnectionLimit
+              -> CrawlLayer
+              -> IO [URI]
+continueCrawl handle session total layer = getUriList handle session total layer
+
+getUriList :: Handle
+           -> SessionData
+           -> ConnectionLimit
+           -> CrawlLayer
+           -> IO [URI]
+getUriList handle (SessionData _ _ ext _) total (Layer depth state) =
+    S.toList <$> (filterExt ext <$> crawlRecursion handle total depth state)
 
 -- | Filters the set of images found during crawling.
 filterExt :: Maybe Extension    -- ^ Extension of images to use for filtering.
@@ -44,11 +62,13 @@ crawlRecursion :: Handle            -- ^ Handle to the file that contains the cr
                -> CrawlState        -- ^ Current list of URIs found.
                -> IO CrawlState     -- ^ Resulting 'Set' of URIs found, wrapped in an 'IO' monad.
 crawlRecursion handle limit 0 uris = return uris
-crawlRecursion handle limit n uris = putLayer handle n >>
-    concatState <$> mapParallel limit getContent (S.toList $ links uris) >>=
-    (\state -> putLayerState handle state >> return state) >>=
-    return . (stateUnion uris) >>=
-    (crawlRecursion handle limit $! (n - 1))
+crawlRecursion handle limit n uris
+    | n == 0    = return uris
+    | otherwise = putLayer handle n >>
+                        concatState <$> mapParallel limit getContent (S.toList $ links uris) >>=
+                        (\state -> putLayerState handle state >> return state) >>=
+                        return . (stateUnion uris) >>=
+                        (crawlRecursion handle limit $! (n - 1))
 
 -- | Concatenates two 'CrawlState' instances.
 concatState :: [CrawlState]         -- ^ List of 'CrawlState' instances being concatenated.
