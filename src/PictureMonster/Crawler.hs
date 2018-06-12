@@ -31,12 +31,11 @@ crawl handle session (Limits total _) = crawlingHeader handle >>
 initialLayer :: SessionData -> CrawlLayer
 initialLayer (SessionData uris depth _ _) = Layer depth (State (S.fromList uris) S.empty)
 
-continueCrawl :: Handle
-              -> SessionData
-              -> ConnectionLimit
+continueCrawl :: SessionData
+              -> ConnectionLimits
               -> CrawlLayer
               -> IO [URI]
-continueCrawl handle session total layer = getUriList handle session total layer
+continueCrawl session (Limits total _) layer = getUriList' session total layer
 
 getUriList :: Handle
            -> SessionData
@@ -45,6 +44,14 @@ getUriList :: Handle
            -> IO [URI]
 getUriList handle (SessionData _ _ ext _) total (Layer depth state) =
     S.toList <$> (filterExt ext <$> crawlRecursion handle total depth state)
+
+getUriList' :: SessionData
+            -> ConnectionLimit
+            -> CrawlLayer
+            -> IO [URI]
+getUriList' (SessionData _ _ ext _) total (Layer depth state) =
+    S.toList <$> (filterExt ext <$> crawlRecursion' total (depth - 1) state)
+
 
 -- | Filters the set of images found during crawling.
 filterExt :: Maybe Extension    -- ^ Extension of images to use for filtering.
@@ -61,14 +68,23 @@ crawlRecursion :: Handle            -- ^ Handle to the file that contains the cr
                -> SearchDepth       -- ^ Remaining search depth.
                -> CrawlState        -- ^ Current list of URIs found.
                -> IO CrawlState     -- ^ Resulting 'Set' of URIs found, wrapped in an 'IO' monad.
-crawlRecursion handle limit 0 uris = return uris
 crawlRecursion handle limit n uris
-    | n == 0    = return uris
+    | n <= 0    = return uris
     | otherwise = putLayer handle n >>
                         concatState <$> mapParallel limit getContent (S.toList $ links uris) >>=
                         (\state -> putLayerState handle state >> return state) >>=
                         return . (stateUnion uris) >>=
                         (crawlRecursion handle limit $! (n - 1))
+
+crawlRecursion' :: ConnectionLimit
+                -> SearchDepth
+                -> CrawlState
+                -> IO CrawlState
+crawlRecursion' limit n uris
+    | n <= 0    = return uris
+    | otherwise = print n >> concatState <$> mapParallel limit getContent (S.toList $ links uris) >>=
+                        return . (stateUnion uris) >>=
+                        (crawlRecursion' limit $! (n - 1))
 
 -- | Concatenates two 'CrawlState' instances.
 concatState :: [CrawlState]         -- ^ List of 'CrawlState' instances being concatenated.

@@ -6,13 +6,15 @@ import Control.Concurrent.ParallelIO.Global (stopGlobalPool)
 import Control.Monad                        (void)
 import Data.Semigroup                       ((<>))
 import Network.URI                          (parseURI)
-import Options.Applicative
+import Options.Applicative                  hiding (ParseError)
 import PictureMonster.Crawler
 import PictureMonster.Data
 import PictureMonster.Downloader
+import PictureMonster.Parser
 import PictureMonster.Pooling
 import PictureMonster.Serializer
 import System.IO
+import Text.Parsec                          (ParseError)
 import Text.Read                            (readMaybe)
 
 -- | Parser for positive integral values.
@@ -79,8 +81,8 @@ possibly limit = limit <|> pure NoLimit
 connLimits :: Parser ConnectionLimits
 connLimits = Limits <$> possibly totalConnLimit <*> possibly hostConnLimit
 
-reportFilePath :: Parser FilePath
-reportFilePath = option str
+outputFilePath :: Parser FilePath
+outputFilePath = option str
     (long "output"
     <> short 'o'
     <> help "Output Markdown file that will contain the crawling report. The file can be used to continue an interrupted session at a later date.")
@@ -90,13 +92,16 @@ reportFilePath = option str
 newSession :: Parser Command
 newSession = NewSession <$> sessionData
     <*> connLimits
-    <*> reportFilePath
+    <*> outputFilePath
+
+inputFilePath :: Parser FilePath
+inputFilePath = argument str
+    (metavar "INPUT"
+    <> help "Input Markdown file with the report from a previous session.")
 
 -- | Parses arguments for the @continue@ subcommand, which continues a previous crawling session.
 existingSession :: Parser Command
-existingSession = ExistingSession <$> argument auto
-    (metavar "SESSION_ID"
-    <> help "ID number of existing session (use the `list` command to list all available sessions).")
+existingSession = ExistingSession <$> inputFilePath
     <*> connLimits
 
 -- | Parses all possible subcommands (@new@, @list@ and @continue@).
@@ -116,11 +121,25 @@ opts = info (commandParser <**> helper)
 -- | Runs the command specified by the user.
 runCommand :: Command -- ^ Command to be executed.
            -> IO ()
-runCommand (NewSession session limits path) = withFile path WriteMode $ \handle ->
-    serializeSession handle session >>
-    (pool limits <$> crawl handle session limits) >>=
-    download session limits
+runCommand (NewSession session limits path) = fromScratch path limits session >>= download session limits
+runCommand (ExistingSession path limits) = parseReport <$> (readFile path) >>= (tryContinueSession path limits)
 runCommand _ = error "not implemented"
+
+tryContinueSession :: FilePath -> ConnectionLimits -> Either ParseError (SessionData, Maybe CrawlLayer) -> IO ()
+tryContinueSession _ _ (Left error) = putStrLn "Report corrupted; cannot recover session"
+tryContinueSession path limits (Right t@(session, _)) = (continueSession path limits t) >>= download session limits
+
+continueSession :: FilePath -> ConnectionLimits -> (SessionData, Maybe CrawlLayer) -> IO [URIPool]
+continueSession path limits (session, Nothing) = fromScratch path limits session
+continueSession path limits (session, Just layer) = fromLayer limits session layer
+
+fromScratch :: FilePath -> ConnectionLimits -> SessionData -> IO [URIPool]
+fromScratch path limits session = withFile path WriteMode $ \handle ->
+    serializeSession handle session >>
+    (pool limits <$> crawl handle session limits)
+
+fromLayer :: ConnectionLimits -> SessionData -> CrawlLayer -> IO [URIPool]
+fromLayer limits session layer = pool limits <$> continueCrawl session limits layer
 
 -- | The main entry point for the program.
 main :: IO ()

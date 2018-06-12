@@ -52,7 +52,7 @@ data Command
     = NewSession SessionData ConnectionLimits FilePath
     -- | Continues a previously interrupted crawling session with the supplied ID.
     -- The crawling and image downloading process will adhere to the specified connection limits.
-    | ExistingSession SessionId ConnectionLimits
+    | ExistingSession FilePath ConnectionLimits
     -- | Lists all interrupted crawling sessions with their IDs.
     | ListSessions deriving Show
 

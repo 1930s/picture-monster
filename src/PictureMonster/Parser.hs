@@ -1,4 +1,4 @@
-module PictureMonster.Parser where
+module PictureMonster.Parser (parseReport) where
 
 import Control.Applicative hiding (many, (<|>))
 import Control.Monad
@@ -11,6 +11,9 @@ import Text.Parsec.Combinator
 import Text.Read
 
 type Parser = Parsec String ()
+
+parseReport :: String -> Either ParseError (SessionData, Maybe CrawlLayer)
+parseReport report = runParser parseSession () "" report
 
 parseSession :: Parser (SessionData, Maybe CrawlLayer)
 parseSession = liftM2 (,) parseSessionInfo $ (try $ Just <$> parseLayers) <|> (return Nothing)
