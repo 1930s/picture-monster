@@ -79,9 +79,18 @@ possibly limit = limit <|> pure NoLimit
 connLimits :: Parser ConnectionLimits
 connLimits = Limits <$> possibly totalConnLimit <*> possibly hostConnLimit
 
+reportFilePath :: Parser FilePath
+reportFilePath = option str
+    (long "output"
+    <> short 'o'
+    <> help "Output Markdown file that will contain the crawling report. The file can be used to continue an interrupted session at a later date.")
+    <|> pure "report.md"
+
 -- | Parses arguments for the @new@ subcommand, which starts a new crawling session.
 newSession :: Parser Command
-newSession = NewSession <$> sessionData <*> connLimits
+newSession = NewSession <$> sessionData
+    <*> connLimits
+    <*> reportFilePath
 
 -- | Parses arguments for the @continue@ subcommand, which continues a previous crawling session.
 existingSession :: Parser Command
@@ -107,7 +116,7 @@ opts = info (commandParser <**> helper)
 -- | Runs the command specified by the user.
 runCommand :: Command -- ^ Command to be executed.
            -> IO ()
-runCommand (NewSession session limits) = withFile "out_file.md" WriteMode $ \handle ->
+runCommand (NewSession session limits path) = withFile path WriteMode $ \handle ->
     serializeSession handle session >>
     (pool limits <$> crawl handle session limits) >>=
     download session limits

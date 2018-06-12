@@ -49,7 +49,7 @@ data Command
     -- | Starts a new crawling session.
     -- The crawler will begin from a supplied list of URIs.
     -- The crawling and image downloading process will adhere to the specified connection limits.
-    = NewSession SessionData ConnectionLimits
+    = NewSession SessionData ConnectionLimits FilePath
     -- | Continues a previously interrupted crawling session with the supplied ID.
     -- The crawling and image downloading process will adhere to the specified connection limits.
     | ExistingSession SessionId ConnectionLimits
