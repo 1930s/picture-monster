@@ -109,7 +109,6 @@ commandParser :: Parser Command
 commandParser = hsubparser (
         command "new" (info newSession (progDesc "Start new session"))
         <> command "continue" (info existingSession (progDesc "Continue previous session"))
-        <> command "list" (info (pure ListSessions) (progDesc "Display all previous sessions"))
     )
 
 -- | Used to display help text in case of parse failure.
@@ -123,7 +122,6 @@ runCommand :: Command -- ^ Command to be executed.
            -> IO ()
 runCommand (NewSession session limits path) = fromScratch path limits session >>= download session limits
 runCommand (ExistingSession path limits) = parseReport <$> (readFile path) >>= (tryContinueSession path limits)
-runCommand _ = error "not implemented"
 
 tryContinueSession :: FilePath -> ConnectionLimits -> Either ParseError (SessionData, Maybe CrawlLayer) -> IO ()
 tryContinueSession _ _ (Left error) = putStrLn "Report corrupted; cannot recover session"

@@ -53,8 +53,6 @@ data Command
     -- | Continues a previously interrupted crawling session with the supplied ID.
     -- The crawling and image downloading process will adhere to the specified connection limits.
     | ExistingSession FilePath ConnectionLimits
-    -- | Lists all interrupted crawling sessions with their IDs.
-    | ListSessions deriving Show
 
 -- | Data structure holding the current crawling state.
 data CrawlState = State {
