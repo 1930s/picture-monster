@@ -44,47 +44,40 @@ getUriList :: Handle
            -> CrawlLayer
            -> IO [URI]
 getUriList handle (SessionData _ _ ext _) total (Layer depth state) =
-    S.toList <$> (filterExt ext <$> crawlRecursion handle total depth state)
+    S.toList <$> images <$> crawlRecursion handle ext total depth state
 
 getUriList' :: SessionData
             -> ConnectionLimit
             -> CrawlLayer
             -> IO [URI]
 getUriList' (SessionData _ _ ext _) total (Layer depth state) =
-    S.toList <$> (filterExt ext <$> crawlRecursion' total (depth - 1) state)
-
--- | Filters the set of images found during crawling.
-filterExt :: Maybe Extension    -- ^ Extension of images to use for filtering.
-          -> CrawlState         -- ^ The final crawling state.
-          -> Set URI            -- ^ The filtered set of 'URI's to download.
-filterExt Nothing state = images state
-filterExt (Just ext) (State _ imgs) = S.filter (testExt ext) imgs
-    where   testExt :: Extension -> URI -> Bool
-            testExt ext uri = ext `isSuffixOf` uriPath uri
+    S.toList <$> images <$> crawlRecursion' ext total (depth - 1) state
 
 -- | Recursive function responsible for constructing and crawling the page tree.
 crawlRecursion :: Handle            -- ^ Handle to the file that contains the crawling session state.
+               -> Maybe Extension
                -> ConnectionLimit   -- ^ Connection limit imposed by the user.
                -> SearchDepth       -- ^ Remaining search depth.
                -> CrawlState        -- ^ Current list of URIs found.
                -> IO CrawlState     -- ^ Resulting 'Set' of URIs found, wrapped in an 'IO' monad.
-crawlRecursion handle limit n uris
+crawlRecursion handle ext limit n uris
     | n <= 0    = return uris
     | otherwise = putLayer handle n >>
-                        concatState <$> mapParallel limit getContent (S.toList $ links uris) >>=
+                        concatState <$> mapParallel limit (getContent ext) (S.toList $ links uris) >>=
                         (\state -> putLayerState handle state >> return state) >>=
                         return . (stateUnion uris) >>=
-                        (crawlRecursion handle limit $! (n - 1))
+                        (crawlRecursion handle ext limit $! (n - 1))
 
-crawlRecursion' :: ConnectionLimit
+crawlRecursion' :: Maybe Extension
+                -> ConnectionLimit
                 -> SearchDepth
                 -> CrawlState
                 -> IO CrawlState
-crawlRecursion' limit n uris
+crawlRecursion' ext limit n uris
     | n <= 0    = return uris
-    | otherwise = print n >> concatState <$> mapParallel limit getContent (S.toList $ links uris) >>=
+    | otherwise = print n >> concatState <$> mapParallel limit (getContent ext) (S.toList $ links uris) >>=
                         return . (stateUnion uris) >>=
-                        (crawlRecursion' limit $! (n - 1))
+                        (crawlRecursion' ext limit $! (n - 1))
 
 -- | Concatenates two 'CrawlState' instances.
 concatState :: [CrawlState]         -- ^ List of 'CrawlState' instances being concatenated.
@@ -94,11 +87,12 @@ concatState (x:xs) = State (S.union (links x) (links ys)) $ S.union (images x) (
     where   ys = concatState xs
 
 -- | Gets all links and image URIs found on a webpage.
-getContent :: URI           -- ^ URI of the webpage to crawl.
+getContent :: Maybe Extension
+           -> URI           -- ^ URI of the webpage to crawl.
            -> IO CrawlState -- ^ Result of the crawl, containing the links and images found.
-getContent uri = response >>= \res -> case res of
+getContent ext uri = response >>= \res -> case res of
     (Left  error)    -> putStr "Cannot fetch contents of page " >> (putStrLn $ show uri) >> return (State S.empty S.empty)
-    (Right document) -> liftM2 State (getLinks uri document) (getImages uri document)
+    (Right document) -> liftM2 State (getLinks uri document) (getImages ext uri document)
     where   response = createRequest uri >>= getDocument
 
 -- | Returns a list of links contained in the page.
@@ -108,10 +102,14 @@ getLinks :: URI             -- ^ URI of the webpage being crawled.
 getLinks uri document = (return . S.fromList . processLinks uri . findLinks) document
 
 -- | Returns a list of images contained in the page.
-getImages :: URI            -- ^ URI of the webpage being crawled.
-          -> Document    -- ^ The document to search, wrapped in an 'IO' monad.
+getImages :: Maybe Extension
+          -> URI            -- ^ URI of the webpage being crawled.
+          -> Document       -- ^ The document to search, wrapped in an 'IO' monad.
           -> IO (Set URI)   -- ^ Resulting image links found in the page. wrapped in an 'IO' monad.
-getImages uri document = (return . S.fromList . processLinks uri . findImages) document
+getImages (Just ext) uri document = S.filter (checkExt ext) <$> getImages Nothing uri document
+    where   checkExt :: Extension -> URI -> Bool
+            checkExt ext uri = ext `isSuffixOf` (uriPath uri)
+getImages Nothing uri document = (return . S.fromList . processLinks uri . findImages) document
 
 -- | Fetches the contents of a 'Document', using the supplied 'Request'.
 getDocument :: Request -> IO (Either HttpException Document)
