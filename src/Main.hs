@@ -81,6 +81,7 @@ possibly limit = limit <|> pure NoLimit
 connLimits :: Parser ConnectionLimits
 connLimits = Limits <$> possibly totalConnLimit <*> possibly hostConnLimit
 
+-- | Parses the output file path to which the report will be written.
 outputFilePath :: Parser FilePath
 outputFilePath = option str
     (long "output"
@@ -94,6 +95,7 @@ newSession = NewSession <$> sessionData
     <*> connLimits
     <*> outputFilePath
 
+-- | Parses the initial file path from which the report should be read.
 inputFilePath :: Parser FilePath
 inputFilePath = argument str
     (metavar "INPUT"
@@ -123,20 +125,37 @@ runCommand :: Command -- ^ Command to be executed.
 runCommand (NewSession session limits path) = fromScratch path limits session >>= download session limits
 runCommand (ExistingSession path limits) = parseReport <$> readFile path >>= tryContinueSession path limits
 
-tryContinueSession :: FilePath -> ConnectionLimits -> Either ParseError (SessionData, Maybe CrawlLayer) -> IO ()
+-- | Attempts to continue a session from a file.
+tryContinueSession :: FilePath                                          -- ^ Path to the file with the session data.
+                   -> ConnectionLimits                                  -- ^ The connection limits imposed on the session.
+                   -> Either ParseError (SessionData, Maybe CrawlLayer) -- ^ Parse results of the input file.
+                   -> IO ()
 tryContinueSession _ _ (Left error) = putStrLn "Report corrupted; cannot recover session"
 tryContinueSession path limits (Right t@(session, _)) = continueSession path limits t >>= download session limits
 
-continueSession :: FilePath -> ConnectionLimits -> (SessionData, Maybe CrawlLayer) -> IO [URIPool]
+-- | Continues an existing crawling session.
+continueSession :: FilePath                         -- ^ Path to the file with the session data.
+                -> ConnectionLimits                 -- ^ The connection limits imposed on the session.
+                -> (SessionData, Maybe CrawlLayer)  -- ^ Tuple containing data about the session being continued and the last completed layer.
+                -> IO [URIPool]                     -- ^ List of 'URIPool's to download, wrapped in an 'IO' monad.
 continueSession path limits (session, Nothing) = fromScratch path limits session
 continueSession path limits (session, Just layer) = fromLayer limits session layer
 
-fromScratch :: FilePath -> ConnectionLimits -> SessionData -> IO [URIPool]
+-- | Restarts an existing crawling session from scratch.
+-- Used when no layer has been completed during crawling.
+fromScratch :: FilePath         -- ^ Path to the file with the session data.
+            -> ConnectionLimits -- ^ The connection limits imposed on the session.
+            -> SessionData      -- ^ Instance of 'SessionData' containing the starting parameters for the session being continued.
+            -> IO [URIPool]     -- ^ List of 'URIPool's to download, wrapped in an 'IO' monad.
 fromScratch path limits session = withFile path WriteMode $ \handle ->
     serializeSession handle session >>
     (pool limits <$> crawl handle session limits)
 
-fromLayer :: ConnectionLimits -> SessionData -> CrawlLayer -> IO [URIPool]
+-- | Restarts an existing crawling session from the last completed layer.
+fromLayer :: ConnectionLimits   -- ^ The connection limits imposed on the session.
+          -> SessionData        -- ^ Instance of 'SessionData' containing the starting parameters for the session being continued.
+          -> CrawlLayer         -- ^ The last 'CrawlLayer' completed in the crawling process.
+          -> IO [URIPool]       -- ^ List of 'URIPool's to download, wrapped in an 'IO' monad.
 fromLayer limits session layer = pool limits <$> continueCrawl session limits layer
 
 -- | The main entry point for the program.

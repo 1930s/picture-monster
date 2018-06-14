@@ -75,5 +75,6 @@ putUriList handle = mapM_ (putUri handle)
 putUri :: Handle -> URI -> IO ()
 putUri handle uri = hPutStr handle "* " >> backquote handle (show uri)
 
+-- | Prints an end-of-session marker.
 endSession :: Handle -> IO ()
 endSession handle = hPutStrLn handle "__Report complete.__"

@@ -30,37 +30,43 @@ crawl handle session (Limits total _) = crawlingHeader handle >>
     getUriList handle session total (initialLayer session) >>=
     \uris -> endSession handle >> return uris
 
-initialLayer :: SessionData -> CrawlLayer
+-- | Creates an empty initial layer based on the starting session data.
+initialLayer :: SessionData -- ^ Structure containing the initial session data.
+             -> CrawlLayer  -- ^ Initial crawling layer.
 initialLayer (SessionData uris depth _ _) = Layer depth (State (S.fromList uris) S.empty)
 
-continueCrawl :: SessionData
-              -> ConnectionLimits
-              -> CrawlLayer
-              -> IO [URI]
+-- | Continues a crawling session from a layer.
+continueCrawl :: SessionData        -- ^ Structure containing the initial session data.
+              -> ConnectionLimits   -- ^ Connection limits imposed on the session.
+              -> CrawlLayer         -- ^ Layer to continue the crawling from.
+              -> IO [URI]           -- ^ List of 'URI's to download, wrapped in an 'IO' monad.
 continueCrawl session (Limits total _) = getUriList' session total
 
-getUriList :: Handle
-           -> SessionData
-           -> ConnectionLimit
-           -> CrawlLayer
-           -> IO [URI]
+-- | Fetches a list of 'URI's to download, creating a crawling report in the process.
+getUriList :: Handle                -- ^ Handle used to write the crawling report to.
+           -> SessionData           -- ^ Structure containing the initial session data.
+           -> ConnectionLimit       -- ^ Limit on total connections imposed by the user.
+           -> CrawlLayer            -- ^ Layer to start the crawling from.
+           -> IO [URI]              -- ^ List of 'URI's to download, wrapped in an 'IO' monad.
 getUriList handle (SessionData _ _ ext _) total (Layer depth state) =
     S.toList . images <$> crawlRecursion handle ext total depth state
 
-getUriList' :: SessionData
-            -> ConnectionLimit
-            -> CrawlLayer
-            -> IO [URI]
+-- | Fetches a list of 'URI's to download without creating a report.
+getUriList' :: SessionData          -- ^ Structure containing the initial session data.
+            -> ConnectionLimit      -- ^ Limit on total connections imposed by the user.
+            -> CrawlLayer           -- ^ Layer to start the crawling from.
+            -> IO [URI]             -- ^ List of 'URI's to download, wrapped in an 'IO' monad.
 getUriList' (SessionData _ _ ext _) total (Layer depth state) =
     S.toList . images <$> crawlRecursion' ext total (depth - 1) state
 
 -- | Recursive function responsible for constructing and crawling the page tree.
+-- Creates a crawling report in the process.
 crawlRecursion :: Handle            -- ^ Handle to the file that contains the crawling session state.
-               -> Maybe Extension
-               -> ConnectionLimit   -- ^ Connection limit imposed by the user.
+               -> Maybe Extension   -- ^ Extension of images to be downloaded.
+               -> ConnectionLimit   -- ^ Total connection limit imposed by the user.
                -> SearchDepth       -- ^ Remaining search depth.
-               -> CrawlState        -- ^ Current list of URIs found.
-               -> IO CrawlState     -- ^ Resulting 'Set' of URIs found, wrapped in an 'IO' monad.
+               -> CrawlState        -- ^ Current crawling state.
+               -> IO CrawlState     -- ^ Resulting crawling state, wrapped in an 'IO' monad.
 crawlRecursion handle ext limit n uris
     | n <= 0    = return uris
     | otherwise = (stateUnion uris <$>
@@ -69,11 +75,13 @@ crawlRecursion handle ext limit n uris
                         (\state -> putLayerState handle state >> return state))) >>=
                         (crawlRecursion handle ext limit $! (n - 1))
 
-crawlRecursion' :: Maybe Extension
-                -> ConnectionLimit
-                -> SearchDepth
-                -> CrawlState
-                -> IO CrawlState
+-- | Recursive function responsible for constructing and crawling the page tree.
+-- Does not create a crawling report in the process.
+crawlRecursion' :: Maybe Extension  -- ^ Extension of images to be downloaded.
+                -> ConnectionLimit  -- ^ Total connection limit imposed by the user.
+                -> SearchDepth      -- ^ Remaining search depth.
+                -> CrawlState       -- ^ Current crawling state.
+                -> IO CrawlState    -- ^ Resulting crawling state, wrapped in an 'IO' monad.
 crawlRecursion' ext limit n uris
     | n <= 0    = return uris
     | otherwise = (stateUnion uris <$>

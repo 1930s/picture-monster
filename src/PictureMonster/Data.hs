@@ -56,7 +56,9 @@ data Command
 
 -- | Data structure holding the current crawling state.
 data CrawlState = State {
+    -- | 'S.Set' of 'URI's to links to crawl.
     links :: S.Set URI,
+    -- | 'S.Set' of 'URI's of images to download.
     images :: S.Set URI
 } deriving Show
 
@@ -68,7 +70,11 @@ stateUnion :: CrawlState        -- ^ First crawl state.
            -> CrawlState        -- ^ Resulting crawl state.
 stateUnion first second = State (links second) $ S.union (images first) (images second)
 
+-- | Data structure representing a crawling layer.
+-- Represents a level of the crawling tree.
 data CrawlLayer = Layer {
+    -- | The remaining depth of the crawling search.
     remainingDepth :: SearchDepth,
+    -- | The crawling state at a given level of the tree.
     state :: CrawlState
 } deriving Show
