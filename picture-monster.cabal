@@ -10,7 +10,7 @@ copyright:           2018 Bartłomiej Dach
 category:            Web
 build-type:          Simple
 cabal-version:       >=1.10
-extra-source-files:  README.md
+extra-source-files:  README
 
 executable picture-monster
   hs-source-dirs:      src

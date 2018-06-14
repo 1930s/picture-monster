@@ -27,38 +27,43 @@ positiveReader = maybeReader readPositive
 -- | Parses the command-line option specifying the maximum number of outgoing connections.
 totalConnLimit :: Parser ConnectionLimit
 totalConnLimit = Limit <$> option positiveReader
-    (long "limit" 
+    (metavar "LIMIT"
+    <> long "limit" 
     <> short 'L'
-    <> help "Total maximum number of connections. Must be a positive value.")
+    <> help "Total maximum number of outgoing connections. Must be a positive value.")
 
 -- | Parses the command-line option specifying the maximum number of outgoing connections to a single host.
 hostConnLimit :: Parser ConnectionLimit
 hostConnLimit = Limit <$> option positiveReader
-    (long "limit-per-host"
+    (metavar "PER_HOST"
+    <> long "limit-per-host"
     <> short 'l'
     <> help "Maximum number of connections to single host. Must be a positive value.")
 
 -- | Parses the command-line option specifying the maximum search depth used when crawling.
 searchDepth :: Parser SearchDepth
 searchDepth = option positiveReader
-    (long "depth"
+    (metavar "DEPTH"
+    <> long "depth"
     <> short 'd'
     <> help "Maximum search depth during crawling. Must be a positive value.")
 
 -- | Parses the command-line option specifying the extension of images to filter out.
 imgExtension :: Parser (Maybe Extension)
 imgExtension = (Just <$> option str
-    (long "extension"
+    (metavar "EXT"
+    <> long "extension"
     <> short 'x'
-    <> help "Image extension to filter out. Only image files with the supplied extension will be saved to disk."))
+    <> help "Image extension to filter out. Only image files with the specified extension will be saved to disk."))
     <|> pure Nothing
 
 -- | Parses the command-line option specifying the path to the target directory in which to save the downloaded files.
 targetDirectory :: Parser FilePath
 targetDirectory = option str
-    (long "directory"
+    (metavar "DIR"
+    <> long "directory"
     <> short 'D'
-    <> help "Target directory in which the images found should be saved. If omitted, images will be saved in the current working directory.")
+    <> help "Target directory to which the images found should be saved. If omitted, images will be saved in the current working directory.")
     <|> pure "."
 
 -- | Parses data concerning a single crawling session and returns them in a 'SessionData' instance.
@@ -84,7 +89,8 @@ connLimits = Limits <$> possibly totalConnLimit <*> possibly hostConnLimit
 -- | Parses the output file path to which the report will be written.
 outputFilePath :: Parser FilePath
 outputFilePath = option str
-    (long "output"
+    (metavar "OUT_FILE"
+    <> long "output"
     <> short 'o'
     <> help "Output Markdown file that will contain the crawling report. The file can be used to continue an interrupted session at a later date.")
     <|> pure "report.md"

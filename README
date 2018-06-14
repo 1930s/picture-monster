@@ -1,0 +1,114 @@
+PICTURE-MONSTER(1)                User Manual               PICTURE-MONSTER(1)
+
+NAME
+       picture-monster - Web crawler and image downloader
+
+SYNOPSIS
+       picture-monster [-h|--help]
+
+       picture-monster  new  URLS...   (-d|--depth DEPTH) [-x|--extension EXT]
+       [-D|--directory DIR] [-L|--limit LIMIT] [-l|--limit-per-host  PER_HOST]
+       [-o|--output OUT_FILE] [-h|--help]
+
+       picture-monster  continue INPUT [-L|--limit LIMIT] [-l|--limit-per-host
+       PER_HOST] [-h|--help]
+
+DESCRIPTION
+       picture-monster is an utility program used for crawling Web  pages  and
+       downloading  images embedded in them.  The program starts crawling from
+       a given set of URLs and follows links in the content of those pages  up
+       to  the  depth  specified  by  the user, collecting images found on the
+       pages along the way.  Upon reaching the desired depth of the tree,  the
+       program starts downloading the images found to the hard disk.
+
+       The  new subcommand is used to start a new crawling session.  The mini‐
+       mal parameters required to start crawling are: the starting set of URLs
+       and  the  maximum search depth.  Upon executing the new subcommand, the
+       program will produce an output Markdown file containing a report on the
+       progress  of  the  crawling  process.  The file produced can be used to
+       resume a started session at a later date after interrupting it.
+
+       The continue subcommand is used to resume a crawling  session  from  an
+       existing  crawling report.  Upon resuming, files that have already been
+       downloaded will not be downloaded again.
+
+OPTIONS
+       General options:
+
+       -h, --help
+              Show help text for the program.
+
+       -L, --limit LIMIT
+              Total maximum number of outgoing connections.  Must be  a  posi‐
+              tive value.
+
+       -l, --limit-per-host PER_HOST
+              Maximum  number  of connections to single host.  Must be a posi‐
+              tive value.
+
+       Options for the new subcommand:
+
+       URLS...
+              List of URLs to start the crawling from.
+
+       -d, --depth DEPTH
+              Maximum search depth during crawling.  Must be a positive value.
+
+       -x, --extension EXT
+              Image extension to filter out.  Only image files with the speci‐
+              fied extension will be saved to disk.
+
+       -D, --directory DIR
+              Target  directory to which the images found should be saved.  If
+              omitted, images will be saved in the current working directory.
+
+       -o, --output OUT_FILE
+              Output Markdown file that will contain the crawling report.  The
+              file  can  be used to continue an interrupted session at a later
+              date.  Default filename used is report.md.
+
+       Options for the continue subcommand:
+
+       INPUT  Input Markdown file with the report from a previous session.
+
+BUGS
+       Bugs  in  this  software  can  be  reported   at   its   GitHub   page:
+       https://github.com/bdach/picture-monster.
+
+COPYING
+       Copyright Bartłomiej Dach (c) 2018
+
+       All rights reserved.
+
+       Redistribution and use in source and binary forms, with or without mod‐
+       ification, are permitted provided that  the  following  conditions  are
+       met:
+
+       ·      Redistributions  of  source code must retain the above copyright
+              notice, this list of conditions and the following disclaimer.
+
+       ·      Redistributions in binary form must reproduce  the  above  copy‐
+              right  notice,  this  list  of conditions and the following dis‐
+              claimer in the documentation  and/or  other  materials  provided
+              with the distribution.
+
+       ·      Neither the name of Author name here nor the names of other con‐
+              tributors may be used to endorse  or  promote  products  derived
+              from this software without specific prior written permission.
+
+       THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+       IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT  NOT  LIMITED
+       TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTIC‐
+       ULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT  OWNER  OR
+       CONTRIBUTORS  BE  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+       EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,  BUT  NOT  LIMITED  TO,
+       PROCUREMENT  OF  SUBSTITUTE  GOODS  OR  SERVICES; LOSS OF USE, DATA, OR
+       PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY  OF
+       LIABILITY,  WHETHER  IN  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+       NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT  OF  THE  USE  OF  THIS
+       SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+AUTHOR
+       Bartłomiej Dach <dach.bartlomiej@gmail.com>
+
+User Manual                       2018-06-14                PICTURE-MONSTER(1)

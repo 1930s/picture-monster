@@ -1,0 +1,134 @@
+.TH PICTURE-MONSTER 1 2018-06-14 "User Manual" "User Manual"
+
+.SH NAME
+picture-monster \- Web crawler and image downloader
+
+.SH SYNOPSIS
+.BR picture-monster
+[\fB-h\fR|\fB--help\fR]
+
+.BR picture-monster
+.BR new
+\fIURLS\fR...
+(\fB-d\fR|\fB--depth\fR
+\fIDEPTH\fR)
+[\fB-x\fR|\fB--extension\fR
+\fIEXT\fR]
+[\fB-D\fR|\fB--directory\fR
+\fIDIR\fR]
+[\fB-L\fR|\fB--limit\fR
+\fILIMIT\fR]
+[\fB-l\fR|\fB--limit-per-host\fR
+\fIPER_HOST\fR]
+[\fB-o\fR|\fB--output\fR
+\fIOUT_FILE\fR]
+[\fB-h\fR|\fB--help\fR]
+
+.BR picture-monster
+.BR continue
+\fIINPUT\fR
+[\fB-L\fR|\fB--limit\fR
+\fILIMIT\fR]
+[\fB-l\fR|\fB--limit-per-host\fR
+\fIPER_HOST\fR]
+[\fB-h\fR|\fB--help\fR]
+
+.SH DESCRIPTION
+.B picture-monster
+is an utility program used for crawling Web pages and downloading images embedded in them.
+The program starts crawling from a given set of URLs and follows links in the content of those pages
+up to the depth specified by the user, collecting images found on the pages along the way.
+Upon reaching the desired depth of the tree, the program starts downloading the images found to the hard disk.
+.PP
+The \fBnew\fR subcommand is used to start a new crawling session.
+The minimal parameters required to start crawling are: the starting set of URLs and the maximum search depth.
+Upon executing the \fBnew\fR subcommand, the program will produce an output Markdown file containing a report
+on the progress of the crawling process.
+The file produced can be used to resume a started session at a later date after interrupting it.
+.PP
+The \fBcontinue\fR subcommand is used to resume a crawling session from an existing crawling report.
+Upon resuming, files that have already been downloaded will not be downloaded again.
+
+.SH OPTIONS
+General options:
+.TP
+.BR \fB-h\fR,\ \fB--help\fR
+Show help text for the program.
+.TP
+.BR \fB-L\fR,\ \fB--limit\fR\ \fILIMIT\fR
+Total maximum number of outgoing connections.
+Must be a positive value.
+.TP
+.BR \fB-l\fR,\ \fB--limit-per-host\fR\ \fIPER_HOST\fR
+Maximum number of connections to single host.
+Must be a positive value.
+.PP
+Options for the \fBnew\fR subcommand:
+.TP
+.BR URLS...
+List of URLs to start the crawling from.
+.TP
+.BR \fB-d\fR,\ \fB--depth\fR\ \fIDEPTH\fR
+Maximum search depth during crawling.
+Must be a positive value.
+.TP
+.BR \fB-x\fR,\ \fB--extension\fR\ \fIEXT\fR
+Image extension to filter out.
+Only image files with the specified extension will be saved to disk.
+.TP
+.BR \fB-D\fR,\ \fB--directory\fR\ \fIDIR\fR
+Target directory to which the images found should be saved.
+If omitted, images will be saved in the current working directory.
+.TP
+.BR \fB-o\fR,\ \fB--output\fR\ \fIOUT_FILE\fR
+Output Markdown file that will contain the crawling report.
+The file can be used to continue an interrupted session at a later date.
+Default filename used is \fBreport.md\fR.
+.PP
+Options for the \fBcontinue\fR subcommand:
+.TP
+.BR \fBINPUT\fR
+Input Markdown file with the report from a previous session.
+
+.SH BUGS
+Bugs in this software can be reported at its GitHub page:
+\fIhttps://github.com/bdach/picture-monster\fR.
+
+.SH COPYING
+Copyright Bartłomiej Dach (c) 2018
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+.IP \[bu]
+Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+.IP \[bu]
+Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following
+disclaimer in the documentation and/or other materials provided
+with the distribution.
+
+.IP \[bu]
+Neither the name of Author name here nor the names of other
+contributors may be used to endorse or promote products derived
+from this software without specific prior written permission.
+
+.PP
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+.SH AUTHOR
+Bartłomiej Dach <\fIdach.bartlomiej@gmail.com\fR>
