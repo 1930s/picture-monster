@@ -9,7 +9,7 @@ import Network.URI
 import PictureMonster.Data
 import PictureMonster.Parallel
 import PictureMonster.Network
-import System.Directory         (createDirectoryIfMissing)
+import System.Directory         (doesFileExist, createDirectoryIfMissing)
 import System.FilePath          (takeDirectory, (</>))
 
 -- | Downloads the files found during crawling, adhering to the imposed connection limits.
@@ -53,7 +53,10 @@ ensureDirectory path = createDirectoryIfMissing True $ takeDirectory path
 downloadFile :: URI         -- ^ 'URI' of the document to download.
              -> FilePath    -- ^ 'FilePath' to save the document to.
              -> IO ()
-downloadFile uri path = createRequest uri >>= saveToFile path
+downloadFile uri path = doesFileExist path >>=
+    \exists -> case exists of
+        False -> createRequest uri >>= saveToFile path
+        True  -> return ()
 
 -- | Saves the results of the supplied 'Request' to the 'FilePath' provided.
 saveToFile :: FilePath  -- ^ The 'FilePath' under which the file should be saved.
