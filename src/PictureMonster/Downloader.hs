@@ -3,8 +3,9 @@
 module PictureMonster.Downloader (download) where
 
 import Conduit                  (withSinkFile)
+import Control.Exception        (try)
 import Control.Monad            (void)
-import Network.HTTP.Simple      (Request, httpSink)
+import Network.HTTP.Simple      (Request, httpSink, HttpException)
 import Network.URI
 import PictureMonster.Data
 import PictureMonster.Parallel
@@ -62,4 +63,7 @@ downloadFile uri path = doesFileExist path >>=
 saveToFile :: FilePath  -- ^ The 'FilePath' under which the file should be saved.
            -> Request   -- ^ The 'Request' whose result should be saved to the file.
            -> IO ()
-saveToFile path req = withSinkFile path (httpSink req . const)
+saveToFile path req = (try $ withSinkFile path (httpSink req . const) :: IO (Either HttpException ())) >>=
+    \result -> case result of
+        (Left err)  -> putStr "Error downloading image: " >> putStrLn path
+        (Right x)   -> return x
