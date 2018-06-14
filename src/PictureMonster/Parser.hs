@@ -13,10 +13,10 @@ import Text.Read
 type Parser = Parsec String ()
 
 parseReport :: String -> Either ParseError (SessionData, Maybe CrawlLayer)
-parseReport report = runParser parseSession () "" report
+parseReport = runParser parseSession () ""
 
 parseSession :: Parser (SessionData, Maybe CrawlLayer)
-parseSession = liftM2 (,) parseSessionInfo $ (try $ Just <$> parseLayers) <|> (return Nothing)
+parseSession = liftM2 (,) parseSessionInfo $ try (Just <$> parseLayers) <|> return Nothing
 
 skipNewLine :: a -> Parser a
 skipNewLine val = endOfLine >> return val
@@ -37,7 +37,7 @@ parseStartingUrl :: Parser URI
 parseStartingUrl = tab >> string "- " >> parseBackquotedUri
 
 parseBackquotedUri :: Parser URI
-parseBackquotedUri = parseBackquote >>= \s -> case (parseURI s) of
+parseBackquotedUri = parseBackquote >>= \s -> case parseURI s of
     Nothing     -> parserZero
     Just uri    -> return uri
 
@@ -45,10 +45,10 @@ parseBackquote :: Parser String
 parseBackquote = between (char '`') (char '`') (many $ noneOf "`")
 
 parseInitialDepth :: Parser SearchDepth
-parseInitialDepth = (string "* Maximum search depth: ") >> parseDepth
+parseInitialDepth = string "* Maximum search depth: " >> parseDepth
 
 parseDepth :: Parser SearchDepth
-parseDepth = (many1 digit) >>= (\d -> case (readMaybe d) of
+parseDepth = many1 digit >>= (\d -> case readMaybe d of
         Nothing     -> parserZero
         Just depth  -> return depth
     ) >>= skipNewLine
@@ -62,7 +62,7 @@ parseTargetDirectory :: Parser FilePath
 parseTargetDirectory = string "* Target directory: " >> parseBackquote
 
 parseLayers :: Parser CrawlLayer
-parseLayers = layerUnion <$> ((string "## Crawling report") >> endOfLine >>
+parseLayers = layerUnion <$> (string "## Crawling report" >> endOfLine >>
     some (try parseLayer))
 
 layerUnion :: [CrawlLayer] -> CrawlLayer

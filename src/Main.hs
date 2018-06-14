@@ -121,11 +121,11 @@ opts = info (commandParser <**> helper)
 runCommand :: Command -- ^ Command to be executed.
            -> IO ()
 runCommand (NewSession session limits path) = fromScratch path limits session >>= download session limits
-runCommand (ExistingSession path limits) = parseReport <$> (readFile path) >>= (tryContinueSession path limits)
+runCommand (ExistingSession path limits) = parseReport <$> readFile path >>= tryContinueSession path limits
 
 tryContinueSession :: FilePath -> ConnectionLimits -> Either ParseError (SessionData, Maybe CrawlLayer) -> IO ()
 tryContinueSession _ _ (Left error) = putStrLn "Report corrupted; cannot recover session"
-tryContinueSession path limits (Right t@(session, _)) = (continueSession path limits t) >>= download session limits
+tryContinueSession path limits (Right t@(session, _)) = continueSession path limits t >>= download session limits
 
 continueSession :: FilePath -> ConnectionLimits -> (SessionData, Maybe CrawlLayer) -> IO [URIPool]
 continueSession path limits (session, Nothing) = fromScratch path limits session

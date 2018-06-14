@@ -34,7 +34,7 @@ putUris handle uris = hPutStrLn handle "* Starting URLs:" >>
 
 -- | Prints 'SearchDepth' information to the handle.
 putDepth :: Handle -> SearchDepth -> IO ()
-putDepth handle depth = hPutStr handle "* Maximum search depth: " >> hPutStrLn handle (show depth)
+putDepth handle depth = hPutStr handle "* Maximum search depth: " >> hPrint handle depth
 
 -- | Prints the desired file extension to the handle.
 putExtension :: Handle -> Maybe String -> IO ()
@@ -57,7 +57,7 @@ crawlingHeader handle = hPutStrLn handle "## Crawling report"
 
 -- | Prints the header for a crawling layer.
 putLayer :: Handle -> SearchDepth -> IO ()
-putLayer handle depth = hPutStr handle "### Layer " >> hPutStrLn handle (show depth)
+putLayer handle depth = hPutStr handle "### Layer " >> hPrint handle depth
 
 -- | Saves the crawling state from a layer to the handle.
 putLayerState :: Handle -> CrawlState -> IO ()
@@ -69,7 +69,7 @@ putLayerState handle state = hPutStrLn handle "#### Links found" >>
 
 -- | Prints a 'Foldable' of 'URI's as a markdown list to the handle.
 putUriList :: (Foldable f) => Handle -> f URI -> IO ()
-putUriList handle uris = mapM_ (putUri handle) uris
+putUriList handle = mapM_ (putUri handle)
 
 -- | Prints an 'URI' to the handle, as a markdown item.
 putUri :: Handle -> URI -> IO ()

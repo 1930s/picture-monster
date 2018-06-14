@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 -- | Module responsible for downloading and saving the images found to disk.
 module PictureMonster.Downloader (download) where
 
@@ -55,15 +56,13 @@ downloadFile :: URI         -- ^ 'URI' of the document to download.
              -> FilePath    -- ^ 'FilePath' to save the document to.
              -> IO ()
 downloadFile uri path = doesFileExist path >>=
-    \exists -> case exists of
-        False -> createRequest uri >>= saveToFile path
-        True  -> return ()
+    \exists -> if exists then return () else createRequest uri >>= saveToFile path
 
 -- | Saves the results of the supplied 'Request' to the 'FilePath' provided.
 saveToFile :: FilePath  -- ^ The 'FilePath' under which the file should be saved.
            -> Request   -- ^ The 'Request' whose result should be saved to the file.
            -> IO ()
 saveToFile path req = (try $ withSinkFile path (httpSink req . const) :: IO (Either HttpException ())) >>=
-    \result -> case result of
+    \case
         (Left err)  -> putStr "Error downloading image: " >> putStrLn path
         (Right x)   -> return x
