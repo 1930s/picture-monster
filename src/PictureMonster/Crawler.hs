@@ -2,6 +2,7 @@
 -- | Module responsible for performing web crawling, constructing the page reference tree and collecting image URLs.
 module PictureMonster.Crawler (crawl, continueCrawl) where
 
+import Control.Exception        (try)
 import Control.Monad
 import qualified Data.Text as T
 import Data.Maybe               (mapMaybe)
@@ -52,7 +53,6 @@ getUriList' :: SessionData
 getUriList' (SessionData _ _ ext _) total (Layer depth state) =
     S.toList <$> (filterExt ext <$> crawlRecursion' total (depth - 1) state)
 
-
 -- | Filters the set of images found during crawling.
 filterExt :: Maybe Extension    -- ^ Extension of images to use for filtering.
           -> CrawlState         -- ^ The final crawling state.
@@ -96,24 +96,26 @@ concatState (x:xs) = State (S.union (links x) (links ys)) $ S.union (images x) (
 -- | Gets all links and image URIs found on a webpage.
 getContent :: URI           -- ^ URI of the webpage to crawl.
            -> IO CrawlState -- ^ Result of the crawl, containing the links and images found.
-getContent uri = liftM2 State (getLinks uri document) (getImages uri document)
-    where   document = createRequest uri >>= getDocument
+getContent uri = response >>= \res -> case res of
+    (Left  error)    -> putStr "Cannot fetch contents of page " >> (putStrLn $ show uri) >> return (State S.empty S.empty)
+    (Right document) -> liftM2 State (getLinks uri document) (getImages uri document)
+    where   response = createRequest uri >>= getDocument
 
 -- | Returns a list of links contained in the page.
 getLinks :: URI             -- ^ URI of the webpage being crawled.
-         -> IO Document     -- ^ The document to search, wrapped in an 'IO' monad.
+         -> Document     -- ^ The document to search, wrapped in an 'IO' monad.
          -> IO (Set URI)    -- ^ Resulting absolute links found in the page, wrapped in an 'IO' monad.
-getLinks uri document = S.fromList . processLinks uri . findLinks <$> document -- (createRequest uri >>= getDocument)
+getLinks uri document = (return . S.fromList . processLinks uri . findLinks) document
 
 -- | Returns a list of images contained in the page.
 getImages :: URI            -- ^ URI of the webpage being crawled.
-          -> IO Document    -- ^ The document to search, wrapped in an 'IO' monad.
+          -> Document    -- ^ The document to search, wrapped in an 'IO' monad.
           -> IO (Set URI)   -- ^ Resulting image links found in the page. wrapped in an 'IO' monad.
-getImages uri document = S.fromList . processLinks uri . findImages <$> document
+getImages uri document = (return . S.fromList . processLinks uri . findImages) document
 
 -- | Fetches the contents of a 'Document', using the supplied 'Request'.
-getDocument :: Request -> IO Document
-getDocument req = httpSink req $ const sinkDoc
+getDocument :: Request -> IO (Either HttpException Document)
+getDocument req = try (httpSink req $ const sinkDoc)
 
 -- | Searches for @<a>@ elements in the supplied HTML document and returns the values of their @href@ attributes.
 findLinks :: Document -> [String]
